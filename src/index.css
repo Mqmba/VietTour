@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #0A1628;
+  --navy-card: #1A2F4A;
+  --teal: #00C896;
+  --teal-dim: #00A87A;
+  --cream: #F7F3EE;
+  --coral: #FF6B35;
+  --text-primary: #0A1628;
+  --text-secondary: #4A5568;
+  --text-muted: #8A96A8;
+  --border: #E2DDD8;
+  --white: #FFFFFF;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-ui); background: var(--cream); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+button { font-family: var(--font-ui); cursor: pointer; }
+input, select { font-family: var(--font-ui); }
