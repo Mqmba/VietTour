@@ -1,10 +1,78 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, Mail, Lock, Eye, EyeOff, User, Phone, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { authAPI } from '../services/api';
 
 export default function Login() {
+  const navigate = useNavigate();
   const [showPw, setShowPw] = useState(false);
   const [mode, setMode] = useState('login'); // 'login' | 'register'
+
+  // State lưu dữ liệu ô nhập liệu
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+
+  // State quản lý phản hồi API (loading, thông báo lỗi / thành công)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Xử lý gửi form (Đăng nhập / Đăng ký)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
+
+    try {
+      if (mode === 'login') {
+        // --- XỬ LÝ ĐĂNG NHẬP ---
+        const res = await authAPI.login({ email, password });
+        
+        // 1. Lưu JWT token và thông tin người dùng vào localStorage
+        localStorage.setItem('token', res.token);
+        localStorage.setItem('user', JSON.stringify(res.user));
+
+        setSuccessMsg('Đăng nhập thành công!');
+        
+        // 2. Chuyển hướng về trang chủ sau 1 giây
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      } else {
+        // --- XỬ LÝ ĐĂNG KÝ ---
+        const res = await authAPI.register({
+          email,
+          password,
+          full_name: fullName,
+          phone,
+        });
+
+        // Tự động đăng nhập luôn sau khi đăng ký thành công
+        localStorage.setItem('token', res.token);
+        localStorage.setItem('user', JSON.stringify(res.user));
+
+        setSuccessMsg('Tạo tài khoản thành công! Đang chuyển hướng...');
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      }
+    } catch (err) {
+      // Hiển thị lỗi từ backend trả về (ví dụ: "Email hoặc mật khẩu không đúng")
+      setError(err.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Đổi tab (Clear hết dữ liệu cũ và thông báo lỗi)
+  const handleSwitchMode = (newMode) => {
+    setMode(newMode);
+    setError('');
+    setSuccessMsg('');
+  };
 
   const inputWrap = {
     display: 'flex', alignItems: 'center', gap: 10,
@@ -55,16 +123,16 @@ export default function Login() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--navy)', textAlign: 'center', marginBottom: 6 }}>
           {mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
         </h1>
-        <p style={{ fontSize: 13.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 28 }}>
+        <p style={{ fontSize: 13.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 24 }}>
           {mode === 'login' ? 'Đăng nhập để quản lý chuyến đi của bạn' : 'Tham gia VietTour để nhận ưu đãi đặc biệt'}
         </p>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', background: '#F0EDE8', borderRadius: 10, padding: 4, marginBottom: 24 }}>
+        {/* Tabs Đăng nhập / Đăng ký */}
+        <div style={{ display: 'flex', background: '#F0EDE8', borderRadius: 10, padding: 4, marginBottom: 20 }}>
           {[{ id: 'login', label: 'Đăng nhập' }, { id: 'register', label: 'Đăng ký' }].map(t => (
             <button
               key={t.id}
-              onClick={() => setMode(t.id)}
+              onClick={() => handleSwitchMode(t.id)}
               style={{
                 flex: 1, padding: '8px', border: 'none', borderRadius: 8,
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -79,20 +147,87 @@ export default function Login() {
           ))}
         </div>
 
-        {/* Form */}
-        <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Thông báo lỗi nếu có */}
+        {error && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 14px', borderRadius: 10,
+            background: '#FEE2E2', color: '#DC2626',
+            fontSize: 13, marginBottom: 16, border: '1px solid #FCA5A5'
+          }}>
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Thông báo thành công nếu có */}
+        {successMsg && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 14px', borderRadius: 10,
+            background: '#D1FAE5', color: '#059669',
+            fontSize: 13, marginBottom: 16, border: '1px solid #6EE7B7'
+          }}>
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Form nhập liệu */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Ô Họ tên (Chỉ hiện khi Đăng ký) */}
           {mode === 'register' && (
             <div style={inputWrap}>
-              <input type="text" placeholder="Họ và tên" style={inputStyle} />
+              <User size={16} color="var(--text-muted)" />
+              <input
+                type="text"
+                placeholder="Họ và tên *"
+                required
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                style={inputStyle}
+              />
             </div>
           )}
+
+          {/* Ô Số điện thoại (Chỉ hiện khi Đăng ký) */}
+          {mode === 'register' && (
+            <div style={inputWrap}>
+              <Phone size={16} color="var(--text-muted)" />
+              <input
+                type="tel"
+                placeholder="Số điện thoại"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+          )}
+
+          {/* Ô Email */}
           <div style={inputWrap}>
             <Mail size={16} color="var(--text-muted)" />
-            <input type="email" placeholder="Email" style={inputStyle} />
+            <input
+              type="email"
+              placeholder="Email *"
+              required
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={inputStyle}
+            />
           </div>
+
+          {/* Ô Mật khẩu */}
           <div style={inputWrap}>
             <Lock size={16} color="var(--text-muted)" />
-            <input type={showPw ? 'text' : 'password'} placeholder="Mật khẩu" style={inputStyle} />
+            <input
+              type={showPw ? 'text' : 'password'}
+              placeholder="Mật khẩu *"
+              required
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              style={inputStyle}
+            />
             <button type="button" onClick={() => setShowPw(!showPw)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
               {showPw ? <EyeOff size={16} color="var(--text-muted)" /> : <Eye size={16} color="var(--text-muted)" />}
             </button>
@@ -106,13 +241,19 @@ export default function Login() {
             </div>
           )}
 
-          <button type="submit" style={{
-            background: 'linear-gradient(135deg, #00C896, #0A7A5E)',
-            color: 'white', border: 'none', borderRadius: 10,
-            padding: '13px', fontSize: 14, fontWeight: 700,
-            cursor: 'pointer', marginTop: 8,
-          }}>
-            {mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
+          {/* Nút Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              background: loading ? '#9CA3AF' : 'linear-gradient(135deg, #00C896, #0A7A5E)',
+              color: 'white', border: 'none', borderRadius: 10,
+              padding: '13px', fontSize: 14, fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer', marginTop: 8,
+              transition: 'all 0.2s',
+            }}
+          >
+            {loading ? 'Đang xử lý...' : (mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản')}
           </button>
         </form>
 
@@ -130,11 +271,8 @@ export default function Login() {
         }}>
           🔍 Tiếp tục với Google
         </button>
-
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 22, lineHeight: 1.6 }}>
-          Đây là giao diện demo — chưa kết nối hệ thống đăng nhập thật.
-        </p>
       </div>
     </div>
   );
 }
+
