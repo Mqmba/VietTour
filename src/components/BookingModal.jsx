@@ -1,21 +1,76 @@
-import { useState } from 'react';
-import { X, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { bookingAPI } from '../services/api';
 
 function fmt(n) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
 export default function BookingModal({ tour, onClose }) {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1 = form, 2 = success
-  const [form, setForm] = useState({ name: '', phone: '', email: '', date: '', adults: '2', children: '0' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({ name: '', phone: '', email: '', date: '', adults: '2', children: '0', specialRequests: '' });
+
+  // Tự động điền tên, email, sđt từ user đã đăng nhập
+  useEffect(() => {
+    try {
+      const savedUserStr = localStorage.getItem('user');
+      if (savedUserStr) {
+        const u = JSON.parse(savedUserStr);
+        setForm(prev => ({
+          ...prev,
+          name: u.full_name || '',
+          email: u.email || '',
+          phone: u.phone || '',
+        }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   if (!tour) return null;
 
   const total = tour.price * (parseInt(form.adults) + parseInt(form.children) * 0.5);
 
-  const handleSubmit = () => {
-    if (!form.name || !form.phone || !form.date) return alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
-    setStep(2);
+  const handleSubmit = async () => {
+    setError('');
+    // Kiểm tra đăng nhập
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Vui lòng đăng nhập trước khi đặt tour!');
+      onClose();
+      navigate('/dang-nhap');
+      return;
+    }
+
+    if (!form.name || !form.phone || !form.date) {
+      setError('Vui lòng điền đầy đủ Họ tên, Số điện thoại và Ngày khởi hành!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await bookingAPI.create({
+        tour_id: Number(tour.id),
+        departure_date: form.date, // ISO date string "YYYY-MM-DD"
+        adults: parseInt(form.adults),
+        children: parseInt(form.children),
+        contact_name: form.name,
+        contact_phone: form.phone,
+        contact_email: form.email,
+        special_requests: form.specialRequests,
+      });
+
+      setStep(2);
+    } catch (err) {
+      setError(err.message || 'Đã có lỗi xảy ra khi tạo đơn đặt tour.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,7 +98,7 @@ export default function BookingModal({ tour, onClose }) {
           <>
             {/* Modal header */}
             <div style={{
-              background: tour.gradient,
+              background: tour.gradient || 'linear-gradient(135deg, #0A1628, #1A2F4A)',
               padding: '20px 24px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
@@ -65,6 +120,16 @@ export default function BookingModal({ tour, onClose }) {
 
             {/* Form */}
             <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {error && (
+                <div style={{
+                  background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626',
+                  borderRadius: 10, padding: '10px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>{error}</span>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <Field label="Họ và tên *" placeholder="Nguyễn Văn An"
                   value={form.name} onChange={v => setForm({ ...form, name: v })} />
@@ -121,20 +186,20 @@ export default function BookingModal({ tour, onClose }) {
                 }}>
                   Hủy
                 </button>
-                <button onClick={handleSubmit} style={{
+                <button onClick={handleSubmit} disabled={loading} style={{
                   flex: 2, padding: '12px',
-                  background: 'linear-gradient(135deg, #00C896, #0A7A5E)',
+                  background: loading ? '#9CA3AF' : 'linear-gradient(135deg, #00C896, #0A7A5E)',
                   border: 'none', borderRadius: 10,
                   fontSize: 14, fontWeight: 700, color: 'white',
-                  cursor: 'pointer',
+                  cursor: loading ? 'not-allowed' : 'pointer',
                 }}>
-                  Xác nhận đặt tour →
+                  {loading ? 'Đang gửi đơn...' : 'Xác nhận đặt tour →'}
                 </button>
               </div>
             </div>
           </>
         ) : (
-          /* Success */
+          /* Success Step */
           <div style={{ padding: '48px 32px', textAlign: 'center' }}>
             <div style={{
               width: 72, height: 72, borderRadius: '50%',
@@ -152,17 +217,27 @@ export default function BookingModal({ tour, onClose }) {
               Đặt tour thành công!
             </h3>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 28 }}>
-              Tour <strong>{tour.title}</strong> đã được đặt.<br />
-              Nhân viên sẽ liên hệ xác nhận trong vòng 2 giờ.
+              Đơn đặt tour <strong>{tour.title}</strong> đã được ghi nhận.<br />
+              Bạn có thể theo dõi trong lịch sử chuyến đi.
             </p>
-            <button onClick={onClose} style={{
-              background: 'var(--navy)', color: 'white',
-              border: 'none', borderRadius: 10,
-              padding: '12px 28px', fontSize: 14, fontWeight: 700,
-              cursor: 'pointer',
-            }}>
-              Đóng
-            </button>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => { onClose(); navigate('/lich-su-dat-tour'); }} style={{
+                background: 'linear-gradient(135deg, #00C896, #0A7A5E)', color: 'white',
+                border: 'none', borderRadius: 10,
+                padding: '12px 20px', fontSize: 14, fontWeight: 700,
+                cursor: 'pointer',
+              }}>
+                Xem lịch sử chuyến đi →
+              </button>
+              <button onClick={onClose} style={{
+                background: 'white', color: 'var(--navy)',
+                border: '1.5px solid #E2DDD8', borderRadius: 10,
+                padding: '12px 20px', fontSize: 14, fontWeight: 600,
+                cursor: 'pointer',
+              }}>
+                Đóng
+              </button>
+            </div>
           </div>
         )}
       </div>

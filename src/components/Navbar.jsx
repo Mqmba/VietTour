@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { MapPin, User, LogOut, ChevronDown, ShieldCheck, UserCheck } from 'lucide-react';
+import { MapPin, User, LogOut, ChevronDown, ShieldCheck, UserCheck, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ProfileModal from './ProfileModal';
 
@@ -37,6 +37,11 @@ export default function Navbar() {
   const handleOpenProfile = () => {
     setDropdownOpen(false);
     setIsProfileOpen(true);
+  };
+
+  const handleOpenMyBookings = () => {
+    setDropdownOpen(false);
+    navigate('/lich-su-dat-tour');
   };
 
   // Get initial for avatar fallback
@@ -188,6 +193,25 @@ export default function Navbar() {
 
                   {/* Actions */}
                   <div style={{ padding: '4px 0' }}>
+                    {/* Item: Lịch sử chuyến đi */}
+                    <button
+                      onClick={handleOpenMyBookings}
+                      style={{
+                        width: '100%',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 16px',
+                        border: 'none', background: 'transparent',
+                        color: 'var(--navy)', fontSize: 13.5, fontWeight: 600,
+                        cursor: 'pointer', textAlign: 'left',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#FAF8F5'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Calendar size={16} color="#00C896" />
+                      Lịch sử chuyến đi
+                    </button>
+
                     {/* Item: Thông tin cá nhân */}
                     <button
                       onClick={handleOpenProfile}

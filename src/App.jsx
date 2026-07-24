@@ -6,6 +6,7 @@ import Tours from './pages/Tours';
 import Promotions from './pages/Promotions';
 import About from './pages/About';
 import Login from './pages/Login';
+import MyBookings from './pages/MyBookings';
 
 function Footer() {
   return (
@@ -29,6 +30,7 @@ function AppShell() {
           <Route path="/khuyen-mai" element={<Promotions />} />
           <Route path="/ve-chung-toi" element={<About />} />
           <Route path="/dang-nhap" element={<Login />} />
+          <Route path="/lich-su-dat-tour" element={<MyBookings />} />
         </Routes>
       </div>
       {!isLogin && <Footer />}
