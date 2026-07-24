@@ -16,7 +16,18 @@ async function request(path, options = {}) {
     })
 
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || "Lỗi không xác định")
+    if (!res.ok || data.success === false) {
+        throw new Error(data.error || data.message || "Lỗi không xác định")
+    }
+
+    // Backend bọc response trong cấu trúc APIResponse { success: true, data: ... }
+    if (data && typeof data === "object" && "data" in data) {
+        if ("meta" in data && data.meta) {
+            return { data: data.data, meta: data.meta }
+        }
+        return data.data
+    }
+
     return data
 }
 

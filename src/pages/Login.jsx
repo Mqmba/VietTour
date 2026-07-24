@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Mail, Lock, Eye, EyeOff, User, Phone, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { authAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
   const [showPw, setShowPw] = useState(false);
   const [mode, setMode] = useState('login'); // 'login' | 'register'
 
@@ -30,10 +32,11 @@ export default function Login() {
       if (mode === 'login') {
         // --- XỬ LÝ ĐĂNG NHẬP ---
         const res = await authAPI.login({ email, password });
+        const userObj = res?.user || res?.data?.user || res;
+        const tokenStr = res?.token || res?.data?.token;
         
-        // 1. Lưu JWT token và thông tin người dùng vào localStorage
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.user));
+        // 1. Cập nhật Auth State và lưu Token/User vào localStorage
+        authLogin(userObj, tokenStr);
 
         setSuccessMsg('Đăng nhập thành công!');
         
@@ -50,9 +53,11 @@ export default function Login() {
           phone,
         });
 
+        const userObj = res?.user || res?.data?.user || res;
+        const tokenStr = res?.token || res?.data?.token;
+
         // Tự động đăng nhập luôn sau khi đăng ký thành công
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.user));
+        authLogin(userObj, tokenStr);
 
         setSuccessMsg('Tạo tài khoản thành công! Đang chuyển hướng...');
         setTimeout(() => {
